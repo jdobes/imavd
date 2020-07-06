@@ -6,7 +6,7 @@ import time
 from tkinter import *
 from tkinter import filedialog, colorchooser
 import PIL
-from PIL import ImageTk, Image
+from PIL import ImageTk, Image, ImageEnhance
 
 
 class ImageEditor:
@@ -71,8 +71,13 @@ class ImageEditor:
         self.imagemenu.add_separator()
         self.imagemenu.add_command(label="Find a color", command=self.find_color)
         self.imagemenu.add_command(label="Invert colors", command=self.invert_colors)
+        self.imagemenu.add_command(label="Change brightness/contrast", command=self.brightness_contrast_dialog)
         self.imagemenu.add_command(label="Crop area", command=self.crop_area_dialog)
         self.imagemenu.add_command(label="Resize", command=self.resize_dialog)
+        self.imagemenu.add_separator()
+        self.imagemenu.add_command(label="Red filter", command=self.red_filter)
+        self.imagemenu.add_command(label="Green filter", command=self.green_filter)
+        self.imagemenu.add_command(label="Blue filter", command=self.blue_filter)
         self.imagemenu.add_separator()
         self.imagemenu.add_command(label="Rotate 90° right", command=self.rotate_right)
         self.imagemenu.add_command(label="Rotate 90° left", command=self.rotate_left)
@@ -344,6 +349,33 @@ class ImageEditor:
         self.render_image()
         self.refresh_menus()
 
+    def red_filter(self):
+        self.undo_data.append(self.img.copy())
+        pixels = self.img.load()
+        for x in range(0, self.img.size[0]):
+            for y in range(0, self.img.size[1]):
+                self.img.putpixel((x,y), (pixels[(x,y)][0],0,0,pixels[(x,y)][3]))
+        self.render_image()
+        self.refresh_menus()
+    
+    def green_filter(self):
+        self.undo_data.append(self.img.copy())
+        pixels = self.img.load()
+        for x in range(0, self.img.size[0]):
+            for y in range(0, self.img.size[1]):
+                self.img.putpixel((x,y), (0,pixels[(x,y)][1],0,pixels[(x,y)][3]))
+        self.render_image()
+        self.refresh_menus()
+    
+    def blue_filter(self):
+        self.undo_data.append(self.img.copy())
+        pixels = self.img.load()
+        for x in range(0, self.img.size[0]):
+            for y in range(0, self.img.size[1]):
+                self.img.putpixel((x,y), (0,0,pixels[(x,y)][2],pixels[(x,y)][3]))
+        self.render_image()
+        self.refresh_menus()
+
     def crop_area_dialog(self):
         self.crop_window = Toplevel()
         self.crop_window.title("Crop area")
@@ -413,6 +445,42 @@ class ImageEditor:
 
         resize = Button(window, text="Resize", command=self.resize)
         resize.grid(row=2, column=0, columnspan=1)
+
+        button_close = Button(window, text="Close", command=window.destroy)
+        button_close.grid(row=2, column=1, columnspan=1)
+    
+    def apply_brightness_contrast(self):
+        self.undo_data.append(self.img)
+        enhancer = ImageEnhance.Brightness(self.img)
+        tmp = enhancer.enhance(float(self.new_brightness.get()))
+        enhancer = ImageEnhance.Contrast(tmp)
+        self.img = enhancer.enhance(float(self.new_contrast.get()))
+        self.render_image()
+        self.refresh_menus()
+        self.new_brightness.set("1.0")
+        self.new_contrast.set("1.0")
+
+    def brightness_contrast_dialog(self):
+        window = Toplevel()
+        window.title("Change brightness/contrast")
+        window.attributes('-topmost', 'true')
+
+        b = Label(window, text="Brightness:")
+        b.grid(row=0, column=0, sticky=W)
+        self.new_brightness = StringVar()
+        self.new_brightness.set("1.0")
+        b_entry = Entry(window, textvariable=self.new_brightness)
+        b_entry.grid(row=0, column=1)
+
+        c = Label(window, text="Contrast:")
+        c.grid(row=1, column=0, sticky=W)
+        self.new_contrast = StringVar()
+        self.new_contrast.set("1.0")
+        c_entry = Entry(window, textvariable=self.new_contrast)
+        c_entry.grid(row=1, column=1)
+
+        enhance = Button(window, text="Apply", command=self.apply_brightness_contrast)
+        enhance.grid(row=2, column=0, columnspan=1)
 
         button_close = Button(window, text="Close", command=window.destroy)
         button_close.grid(row=2, column=1, columnspan=1)
