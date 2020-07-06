@@ -70,6 +70,7 @@ class ImageEditor:
         self.imagemenu.add_command(label="Info about image", command=self.image_info)
         self.imagemenu.add_command(label="Find a color", command=self.find_color)
         self.imagemenu.add_command(label="Crop area", command=self.crop_area_dialog)
+        self.imagemenu.add_command(label="Resize", command=self.resize_dialog)
         self.menubar.add_cascade(label="Image", menu=self.imagemenu)
 
         self.root.config(menu=self.menubar)
@@ -342,6 +343,37 @@ class ImageEditor:
 
         button_close = Button(self.crop_window, text="Close", command=self.close_crop_window)
         button_close.grid(row=6, column=0, columnspan=2)
+    
+    def resize(self):
+        self.undo_data.append(self.img)
+        self.img = self.img.resize((int(self.new_width.get()), int(self.new_height.get())))
+        self.render_image()
+        self.refresh_menus()
+
+    def resize_dialog(self):
+        window = Toplevel()
+        window.title("Resize")
+        window.attributes('-topmost', 'true')
+
+        w = Label(window, text="Width:")
+        w.grid(row=0, column=0, sticky=W)
+        self.new_width = StringVar()
+        self.new_width.set(str(self.img.size[0]))
+        w_entry = Entry(window, textvariable=self.new_width)
+        w_entry.grid(row=0, column=1)
+
+        h = Label(window, text="Height:")
+        h.grid(row=1, column=0, sticky=W)
+        self.new_height = StringVar()
+        self.new_height.set(str(self.img.size[1]))
+        h_entry = Entry(window, textvariable=self.new_height)
+        h_entry.grid(row=1, column=1)
+
+        resize = Button(window, text="Resize", command=self.resize)
+        resize.grid(row=2, column=0, columnspan=1)
+
+        button_close = Button(window, text="Close", command=window.destroy)
+        button_close.grid(row=2, column=1, columnspan=1)
 
     def close_color_window(self):
         self.color_window.destroy()
