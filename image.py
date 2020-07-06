@@ -1,5 +1,8 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
+import os
+import time
+
 from tkinter import *
 from tkinter import filedialog
 import PIL
@@ -15,6 +18,10 @@ class ImageEditor:
 
         self.bg_img = Image.open("./tile.png")
         self.bg_tiles = set()
+
+        self.img = None
+        self.img_tk = None
+        self.img_id = None
 
         self.frame = Frame(self.root)
         self.v_scroll = Scrollbar(self.frame, orient='vertical')
@@ -97,16 +104,27 @@ class ImageEditor:
         filename = filedialog.askopenfilename(title='open')
         if filename:
             self.close_image()
-            img = Image.open(filename)
-            self.canvas_generate_bg(*img.size)
-            self.img = ImageTk.PhotoImage(img)
-            self.img_id = self.canvas.create_image(0, 0, image=self.img, anchor=NW)
+            try:
+                self.img = Image.open(filename)
+            except:
+                print(f"Unable to open file: {filename}! Invalid image format?")
+                window = Toplevel()
+                window.title("ERROR")
+                window.attributes('-topmost', 'true')
+                label = Label(window, text=f"Unable to open {filename}! Invalid image format?")
+                label.pack(fill='x', padx=50, pady=5)
+                button_close = Button(window, text="OK", command=window.destroy)
+                button_close.pack(fill='x')
+                return
+            self.canvas_generate_bg(*self.img.size)
+            self.img_tk = ImageTk.PhotoImage(self.img)
+            self.img_id = self.canvas.create_image(0, 0, image=self.img_tk, anchor=NW)
             self.canvas.config(scrollregion=self.canvas.bbox(self.img_id))
             self.current_image = filename
             self.refresh_menus()
             print(f"File opened: {filename}")
         else:
-            print(f"Invalid file: {filename}")
+            print(f"No file specified: {filename}")
 
     def close_image(self):
         if self.current_image:
@@ -116,6 +134,9 @@ class ImageEditor:
             self.canvas.yview_moveto(0)
             self.canvas.config(scrollregion=(0,0,0,0))
             self.current_image = None
+            self.img = None
+            self.img_tk = None
+            self.img_id = None
             self.refresh_menus()
             print("File closed.")
 
@@ -126,7 +147,49 @@ class ImageEditor:
         pass
 
     def image_info(self):
-        pass
+        window = Toplevel()
+        window.title("Image details")
+        #window.geometry("320x240")
+        window.attributes('-topmost', 'true')
+
+        name_parts = os.path.basename(self.current_image).rsplit('.', 1)
+
+        name = Label(window, text="Image Name:")
+        name.grid(row=0, column=0, sticky=W)
+        name_data = Label(window, text=f"{name_parts[0]}")
+        name_data.grid(row=0, column=1, sticky=W)
+
+        extension = Label(window, text="Image Extension:")
+        extension.grid(row=1, column=0, sticky=W)
+        if len(name_parts) > 1:
+            extension_data = Label(window, text=f".{name_parts[1]}")
+            extension_data.grid(row=1, column=1, sticky=W)
+        else:
+            extension_data = Label(window, text="-")
+            extension_data.grid(row=1, column=1, sticky=W)
+
+        location = Label(window, text="Image Location:")
+        location.grid(row=2, column=0, sticky=W)
+        location_data = Label(window, text=f"{os.path.dirname(self.current_image)}")
+        location_data.grid(row=2, column=1, sticky=W)
+
+        dimension = Label(window, text="Image Dimension:")
+        dimension.grid(row=3, column=0, sticky=W)
+        dimension_data = Label(window, text=f"{self.img.size[0]}x{self.img.size[1]}")
+        dimension_data.grid(row=3, column=1, sticky=W)
+
+        size = Label(window, text="Image Size:")
+        size.grid(row=4, column=0, sticky=W)
+        size_data = Label(window, text=f"{round(os.stat(self.current_image).st_size/1000, 2)} KB")
+        size_data.grid(row=4, column=1, sticky=W)
+
+        created = Label(window, text="Image Created On:")
+        created.grid(row=5, column=0, sticky=W)
+        created_data = Label(window, text=f"{time.ctime(os.path.getctime(self.current_image))}")
+        created_data.grid(row=5, column=1, sticky=W)
+
+        button_close = Button(window, text="Close", command=window.destroy)
+        button_close.grid(row=6, column=0, columnspan=2)
 
     def pick_color_tool(self):
         pass
