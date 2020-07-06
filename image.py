@@ -39,6 +39,8 @@ class ImageEditor:
         self.frame.pack(fill=BOTH, expand=True)
 
         self.current_image = None
+        self.undo_data = []
+
         self.refresh_menus()
 
         self.current_color = "#000000"
@@ -60,6 +62,10 @@ class ImageEditor:
         self.filemenu.add_command(label="Exit", command=self.exit)
         self.menubar.add_cascade(label="File", menu=self.filemenu)
 
+        self.editmenu = Menu(self.menubar, tearoff=0)
+        self.editmenu.add_command(label="Undo", command=self.undo)
+        self.menubar.add_cascade(label="Edit", menu=self.editmenu)
+
         self.imagemenu = Menu(self.menubar, tearoff=0)
         self.imagemenu.add_command(label="Info about image", command=self.image_info)
         self.imagemenu.add_command(label="Find a color", command=self.find_color)
@@ -76,12 +82,20 @@ class ImageEditor:
             state = "disabled"
             title = "PhotoEdit"
         
+        if self.undo_data:
+            undo_state = "normal"
+        else:
+            undo_state = "disabled"
+
         self.root.title(title)
 
         self.filemenu.entryconfig(1, state=state)
         self.filemenu.entryconfig(3, state=state)
 
+        self.editmenu.entryconfig(0, state=undo_state)
+
         self.menubar.entryconfig(2, state=state)
+        self.menubar.entryconfig(3, state=state)
 
     def canvas_generate_bg(self, w, h):
         new_background_width = 0
@@ -131,6 +145,10 @@ class ImageEditor:
             print(f"No file specified: {filename}")
     
     def render_image(self):
+        self.canvas.delete("all")
+        self.bg_tiles.clear()
+        self.canvas.xview_moveto(0)
+        self.canvas.yview_moveto(0)
         self.canvas_generate_bg(*self.img.size)
         self.img_tk = ImageTk.PhotoImage(self.img)
         self.img_id = self.canvas.create_image(0, 0, image=self.img_tk, anchor=NW)
@@ -147,11 +165,9 @@ class ImageEditor:
             self.img = None
             self.img_tk = None
             self.img_id = None
+            self.undo_data = []
             self.refresh_menus()
             print("File closed.")
-
-    def save_image(self):
-        pass
 
     def save_image_as(self):
         pass
@@ -260,15 +276,16 @@ class ImageEditor:
             self.canvas.coords(self.crop_rectangle, int(self.start_x_str.get()), int(self.start_y_str.get()), int(self.end_x_str.get()), int(self.end_y_str.get()))
 
     def crop_area(self):
+        self.undo_data.append(self.img)
         self.img = self.img.crop((int(self.start_x_str.get()), int(self.start_y_str.get()), int(self.end_x_str.get()), int(self.end_y_str.get())))
-        self.canvas.delete("all")
-        self.bg_tiles.clear()
-        self.canvas.xview_moveto(0)
-        self.canvas.yview_moveto(0)
-        self.canvas.config(scrollregion=(0,0,0,0))
-        self.img_tk = None
-        self.img_id = None
         self.render_image()
+        self.refresh_menus()
+    
+    def undo(self):
+        img = self.undo_data.pop()
+        self.img = img
+        self.render_image()
+        self.refresh_menus()
 
     def crop_area_dialog(self):
         self.crop_window = Toplevel()
