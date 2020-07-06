@@ -68,9 +68,17 @@ class ImageEditor:
 
         self.imagemenu = Menu(self.menubar, tearoff=0)
         self.imagemenu.add_command(label="Info about image", command=self.image_info)
+        self.imagemenu.add_separator()
         self.imagemenu.add_command(label="Find a color", command=self.find_color)
+        self.imagemenu.add_command(label="Invert colors", command=self.invert_colors)
         self.imagemenu.add_command(label="Crop area", command=self.crop_area_dialog)
         self.imagemenu.add_command(label="Resize", command=self.resize_dialog)
+        self.imagemenu.add_separator()
+        self.imagemenu.add_command(label="Rotate 90° right", command=self.rotate_right)
+        self.imagemenu.add_command(label="Rotate 90° left", command=self.rotate_left)
+        self.imagemenu.add_separator()
+        self.imagemenu.add_command(label="Flip horizontally", command=self.flip_horizontally)
+        self.imagemenu.add_command(label="Flip vertically", command=self.flip_vertically)
         self.menubar.add_cascade(label="Image", menu=self.imagemenu)
 
         self.root.config(menu=self.menubar)
@@ -283,6 +291,40 @@ class ImageEditor:
 
         button_close = Button(self.color_window, text="Close", command=self.close_color_window)
         button_close.grid(row=3, column=2, columnspan=1)
+    
+    def invert_colors(self):
+        self.undo_data.append(self.img)
+        r, g, b, a = self.img.split()
+        def invert(img):
+            return img.point(lambda p: 255 - p)
+        r, g, b = map(invert, (r, g, b))
+        self.img = Image.merge(self.img.mode, (r, g, b, a))
+        self.render_image()
+        self.refresh_menus()
+
+    def rotate_right(self):
+        self.undo_data.append(self.img)
+        self.img = self.img.transpose(Image.ROTATE_270)
+        self.render_image()
+        self.refresh_menus()
+
+    def rotate_left(self):
+        self.undo_data.append(self.img)
+        self.img = self.img.transpose(Image.ROTATE_90)
+        self.render_image()
+        self.refresh_menus()
+
+    def flip_vertically(self):
+        self.undo_data.append(self.img)
+        self.img = self.img.transpose(Image.FLIP_TOP_BOTTOM)
+        self.render_image()
+        self.refresh_menus()
+
+    def flip_horizontally(self):
+        self.undo_data.append(self.img)
+        self.img = self.img.transpose(Image.FLIP_LEFT_RIGHT)
+        self.render_image()
+        self.refresh_menus()
     
     def draw_crop_rectangle(self):
         if not self.crop_rectangle:
