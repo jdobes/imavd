@@ -235,6 +235,17 @@ class ImageEditor:
         self.color_canvas.configure(bg=self.current_color)
         self.color_label.configure(text=f"{self.current_color}")
 
+    def color_to_transparency(self):
+        self.undo_data.append(self.img.copy())
+        rgb = tuple(int(self.current_color.lstrip("#")[i:i+2], 16) for i in (0, 2, 4))
+        pixels = self.img.load()
+        for x in range(0, self.img.size[0]):
+            for y in range(0, self.img.size[1]):
+                if pixels[(x,y)][0] == rgb[0] and pixels[(x,y)][1] == rgb[1] and pixels[(x,y)][2] == rgb[2]:
+                    self.img.putpixel((x,y), (0,0,0,0))
+        self.render_image()
+        self.refresh_menus()
+
     def pick_color_palette(self):
         my_color = colorchooser.askcolor(color=self.current_color)
         if my_color[1]:
@@ -266,8 +277,11 @@ class ImageEditor:
         pick_color = Button(self.color_window, text="Pixels of this color in image", command=self.count_pixels)
         pick_color.grid(row=1, column=2, columnspan=1)
 
+        clear_color = Button(self.color_window, text="Convert pixels of this color to transparency", command=self.color_to_transparency)
+        clear_color.grid(row=2, column=2, columnspan=1)
+
         button_close = Button(self.color_window, text="Close", command=self.close_color_window)
-        button_close.grid(row=2, column=2, columnspan=1)
+        button_close.grid(row=3, column=2, columnspan=1)
     
     def draw_crop_rectangle(self):
         if not self.crop_rectangle:
