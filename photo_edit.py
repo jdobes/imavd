@@ -184,7 +184,10 @@ class ImageEditor:
             print("File closed.")
 
     def save_image_as(self):
-        pass
+        filename = filedialog.asksaveasfile(mode='wb')
+        if filename:
+            self.img.save(filename)
+            print(f"File saved: {filename.name}")
 
     def image_info(self):
         window = Toplevel()
