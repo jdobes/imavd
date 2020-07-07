@@ -217,7 +217,7 @@ def parse_video(capture):
                 x = approx.ravel()[0]
                 y = approx.ravel()[1]
 
-                if area > 32000:
+                if area > 50000:
                     cv2.drawContours(frame, [approx], 0, (0, 0, 0), 5)
                     if len(approx) == 3:
                         detected = "triangle %s" % color
