@@ -20,6 +20,7 @@ class ImageEditor:
         self.bg_tiles = set()
 
         self.img = None
+        self.img_zoomed = None
 
         self.img_tk = None
         self.img_id = None
@@ -50,6 +51,8 @@ class ImageEditor:
 
         self.crop_window = None
         self.crop_rectangle = None
+
+        self.zoom = 1.0
 
     def setup_menus(self):
         self.menubar = Menu(self.root)
@@ -86,6 +89,15 @@ class ImageEditor:
         self.imagemenu.add_command(label="Flip vertically", command=self.flip_vertically)
         self.menubar.add_cascade(label="Image", menu=self.imagemenu)
 
+        self.zoommenu = Menu(self.menubar, tearoff=0)
+        self.zoommenu.add_command(label="25 %", command=self.zoom_25)
+        self.zoommenu.add_command(label="50 %", command=self.zoom_50)
+        self.zoommenu.add_command(label="100 %", command=self.zoom_100)
+        self.zoommenu.add_command(label="200 %", command=self.zoom_200)
+        self.zoommenu.add_command(label="400 %", command=self.zoom_400)
+        self.zoommenu.add_command(label="500 %", command=self.zoom_500)
+        self.menubar.add_cascade(label="Zoom", menu=self.zoommenu)
+
         self.root.config(menu=self.menubar)
     
     def refresh_menus(self):
@@ -110,6 +122,7 @@ class ImageEditor:
 
         self.menubar.entryconfig(2, state=state)
         self.menubar.entryconfig(3, state=state)
+        self.menubar.entryconfig(4, state=state)
 
     def canvas_generate_bg(self, w, h):
         new_background_width = 0
@@ -163,10 +176,14 @@ class ImageEditor:
         self.bg_tiles.clear()
         self.canvas.xview_moveto(0)
         self.canvas.yview_moveto(0)
-        self.canvas_generate_bg(*self.img.size)
-        self.img_tk = ImageTk.PhotoImage(self.img)
+        self.img_zoomed = self.img.resize((int(self.zoom * self.img.size[0]), int(self.zoom * self.img.size[1])))
+        self.canvas_generate_bg(*self.img_zoomed.size)
+        self.img_tk = ImageTk.PhotoImage(self.img_zoomed)
         self.img_id = self.canvas.create_image(0, 0, image=self.img_tk, anchor=NW)
         self.canvas.config(scrollregion=self.canvas.bbox(self.img_id))
+        if self.crop_rectangle:
+            self.crop_rectangle = self.canvas.create_rectangle(int(self.zoom * int(self.start_x_str.get())), int(self.zoom * int(self.start_y_str.get())), int(self.zoom * int(self.end_x_str.get())), int(self.zoom * int(self.end_y_str.get())))
+
 
     def close_image(self):
         if self.current_image:
@@ -179,7 +196,9 @@ class ImageEditor:
             self.img = None
             self.img_tk = None
             self.img_id = None
+            self.img_zoomed = None
             self.undo_data = []
+            self.zoom = 1.0
             self.refresh_menus()
             print("File closed.")
 
@@ -271,8 +290,8 @@ class ImageEditor:
     def canvas_click(self, event):
         x = self.canvas.canvasx(event.x)
         y = self.canvas.canvasy(event.y)
-        if self.img and x <= self.img.size[0] and y <= self.img.size[1]:
-            rgba = self.img.getpixel((x, y))
+        if self.img_zoomed and x <= self.img_zoomed.size[0] and y <= self.img_zoomed.size[1]:
+            rgba = self.img_zoomed.getpixel((x, y))
             print(f"clicked at x={x}, y={y}, rgba={rgba}")
             rgb_hex = "#%02x%02x%02x" % (rgba[0], rgba[1], rgba[2])
             if self.color_canvas and self.color_label:
@@ -336,13 +355,16 @@ class ImageEditor:
     
     def draw_crop_rectangle(self):
         if not self.crop_rectangle:
-            self.crop_rectangle = self.canvas.create_rectangle(int(self.start_x_str.get()), int(self.start_y_str.get()), int(self.end_x_str.get()), int(self.end_y_str.get()))
+            self.crop_rectangle = self.canvas.create_rectangle(int(self.zoom * int(self.start_x_str.get())), int(self.zoom * int(self.start_y_str.get())), int(self.zoom * int(self.end_x_str.get())), int(self.zoom * int(self.end_y_str.get())))
         else:
-            self.canvas.coords(self.crop_rectangle, int(self.start_x_str.get()), int(self.start_y_str.get()), int(self.end_x_str.get()), int(self.end_y_str.get()))
+            self.canvas.coords(self.crop_rectangle, int(self.zoom * int(self.start_x_str.get())), int(self.zoom * int(self.start_y_str.get())), int(self.zoom * int(self.end_x_str.get())), int(self.zoom * int(self.end_y_str.get())))
 
     def crop_area(self):
         self.undo_data.append(self.img)
         self.img = self.img.crop((int(self.start_x_str.get()), int(self.start_y_str.get()), int(self.end_x_str.get()), int(self.end_y_str.get())))
+        if self.crop_rectangle:
+            self.canvas.delete(self.crop_rectangle)
+        self.crop_rectangle = None
         self.render_image()
         self.refresh_menus()
     
@@ -464,7 +486,7 @@ class ImageEditor:
         elif new_b > 255:
             new_b = 255
         ratio = maprange((-255,255), (0.0, 2.0), new_b)
-        print(f"brightness {new_b} mapped to {ratio}")
+        #print(f"brightness {new_b} mapped to {ratio}")
         tmp = enhancer.enhance(ratio)
         enhancer = ImageEnhance.Contrast(tmp)
         new_c = int(self.new_contrast.get())
@@ -473,7 +495,7 @@ class ImageEditor:
         elif new_c > 100:
             new_c = 100
         ratio = maprange((-100,100), (0.0, 2.0), new_c)
-        print(f"contrast {new_c} mapped to {ratio}")
+        #print(f"contrast {new_c} mapped to {ratio}")
         self.img = enhancer.enhance(ratio)
         self.render_image()
         self.refresh_menus()
@@ -504,6 +526,30 @@ class ImageEditor:
 
         button_close = Button(window, text="Close", command=window.destroy)
         button_close.grid(row=2, column=1, columnspan=1)
+
+    def zoom_25(self):
+        self.zoom = 0.25
+        self.render_image()
+
+    def zoom_50(self):
+        self.zoom = 0.5
+        self.render_image()
+
+    def zoom_100(self):
+        self.zoom = 1.0
+        self.render_image()
+    
+    def zoom_200(self):
+        self.zoom = 2.0
+        self.render_image()
+    
+    def zoom_400(self):
+        self.zoom = 4.0
+        self.render_image()
+    
+    def zoom_500(self):
+        self.zoom = 5.0
+        self.render_image()
 
     def close_color_window(self):
         self.color_window.destroy()
