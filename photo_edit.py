@@ -453,32 +453,49 @@ class ImageEditor:
         button_close.grid(row=2, column=1, columnspan=1)
     
     def apply_brightness_contrast(self):
+        def maprange( a, b, s):
+            (a1, a2), (b1, b2) = a, b
+            return  b1 + ((s - a1) * (b2 - b1) / (a2 - a1))
         self.undo_data.append(self.img)
         enhancer = ImageEnhance.Brightness(self.img)
-        tmp = enhancer.enhance(float(self.new_brightness.get()))
+        new_b = int(self.new_brightness.get())
+        if new_b < -255:
+            new_b = -255
+        elif new_b > 255:
+            new_b = 255
+        ratio = maprange((-255,255), (0.0, 2.0), new_b)
+        print(f"brightness {new_b} mapped to {ratio}")
+        tmp = enhancer.enhance(ratio)
         enhancer = ImageEnhance.Contrast(tmp)
-        self.img = enhancer.enhance(float(self.new_contrast.get()))
+        new_c = int(self.new_contrast.get())
+        if new_c < -100:
+            new_c = -100
+        elif new_c > 100:
+            new_c = 100
+        ratio = maprange((-100,100), (0.0, 2.0), new_c)
+        print(f"contrast {new_c} mapped to {ratio}")
+        self.img = enhancer.enhance(ratio)
         self.render_image()
         self.refresh_menus()
-        self.new_brightness.set("1.0")
-        self.new_contrast.set("1.0")
+        self.new_brightness.set("0")
+        self.new_contrast.set("0")
 
     def brightness_contrast_dialog(self):
         window = Toplevel()
         window.title("Change brightness/contrast")
         window.attributes('-topmost', 'true')
 
-        b = Label(window, text="Brightness:")
+        b = Label(window, text="Brightness (-255 - 255):")
         b.grid(row=0, column=0, sticky=W)
         self.new_brightness = StringVar()
-        self.new_brightness.set("1.0")
+        self.new_brightness.set("0")
         b_entry = Entry(window, textvariable=self.new_brightness)
         b_entry.grid(row=0, column=1)
 
-        c = Label(window, text="Contrast:")
+        c = Label(window, text="Contrast (-100 - 100):")
         c.grid(row=1, column=0, sticky=W)
         self.new_contrast = StringVar()
-        self.new_contrast.set("1.0")
+        self.new_contrast.set("0")
         c_entry = Entry(window, textvariable=self.new_contrast)
         c_entry.grid(row=1, column=1)
 
